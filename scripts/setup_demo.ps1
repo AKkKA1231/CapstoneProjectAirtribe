@@ -57,4 +57,5 @@ Write-Host "  `$base     = $base" -ForegroundColor Gray
 Write-Host "  `$alphaKey = $alphaKey" -ForegroundColor Gray
 Write-Host "  `$betaKey  = $betaKey" -ForegroundColor Gray
 Write-Host "  `$demoTag  = $demoTag" -ForegroundColor Gray
-Write-Host "  Send-Prism function is ready to use.`n" -ForegroundColor Gray
+Write-Host "  Send-Prism function is ready to use." -ForegroundColor Gray
+
