@@ -1,0 +1,49 @@
+# Render Blueprint for the Prism gateway (FastAPI backend).
+# Database: Supabase Postgres (pgvector). Frontend: Vercel (see frontend/vercel.json).
+# Values marked `sync: false` are secrets: Render prompts for them when the
+# Blueprint is first applied. Never commit real values to this file.
+services:
+  - type: web
+    name: prism-gateway
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health/ready
+    autoDeploy: true
+    envVars:
+      - key: PRISM_ENVIRONMENT
+        value: production
+      - key: PRISM_LOG_LEVEL
+        value: INFO
+      - key: PRISM_EXPOSE_API_DOCS
+        value: "false"
+      - key: PRISM_SEED_CONFIG_DIR
+        value: ../config
+      - key: PRISM_SEED_GATEWAY_FILE
+        value: gateway_config.production.json
+      - key: PRISM_SEED_PRICING_FILE
+        value: model_pricing.production.json
+      - key: PRISM_SEED_KEYS_FILE
+        value: seed_keys.production.json
+      # Supabase session pooler allows few connections on small plans.
+      - key: PRISM_DATABASE_POOL_SIZE
+        value: "5"
+      - key: PRISM_DATABASE_MAX_OVERFLOW
+        value: "5"
+      # Supabase "Session pooler" URI (IPv4, port 5432). Render has no outbound
+      # IPv6, so the direct db.<ref>.supabase.co host will not connect.
+      - key: PRISM_DATABASE_URL
+        sync: false
+      # JSON list, e.g. ["https://prism-console.vercel.app"]
+      - key: PRISM_CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: PRISM_AUTH_PEPPER
+        sync: false
+      - key: PRISM_ADMIN_API_KEY
+        sync: false
+      - key: PRISM_BOOTSTRAP_TENANT_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
