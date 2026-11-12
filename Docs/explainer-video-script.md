@@ -40,20 +40,39 @@ function Send-Prism {
         max_tokens = 64
     } | ConvertTo-Json -Depth 5 -Compress
 
-    $response = Invoke-WebRequest "$base/v1/chat/completions" `
-        -Method Post `
-        -Headers @{ Authorization = "Bearer $Key" } `
-        -ContentType 'application/json' `
-        -Body $body `
-        -SkipHttpErrorCheck
+    $statusCode = 0
+    $headers = @{}
+    $content = ""
+
+    try {
+        $response = Invoke-WebRequest "$base/v1/chat/completions" `
+            -Method Post `
+            -Headers @{ Authorization = "Bearer $Key" } `
+            -ContentType 'application/json' `
+            -Body $body `
+            -UseBasicParsing
+
+        $statusCode = [int]$response.StatusCode
+        $headers = $response.Headers
+        $content = $response.Content
+    }
+    catch {
+        if ($_.Exception.Response) {
+            $statusCode = [int]$_.Exception.Response.StatusCode
+            $headers = $_.Exception.Response.Headers
+            $content = if ($_.ErrorDetails) { $_.ErrorDetails.Message } else { $_.Exception.Message }
+        } else {
+            throw $_
+        }
+    }
 
     [pscustomobject]@{
-        Status   = [int]$response.StatusCode
-        Provider = $response.Headers['x-prism-provider']
-        Cache    = $response.Headers['x-prism-cache']
-        Fallback = $response.Headers['x-prism-fallback']
-        CostUSD  = $response.Headers['x-prism-cost-usd']
-        Body     = $response.Content
+        Status   = $statusCode
+        Provider = if ($headers['x-prism-provider']) { $headers['x-prism-provider'] } else { $headers.GetValues('x-prism-provider') }
+        Cache    = if ($headers['x-prism-cache']) { $headers['x-prism-cache'] } else { $headers.GetValues('x-prism-cache') }
+        Fallback = if ($headers['x-prism-fallback']) { $headers['x-prism-fallback'] } else { $headers.GetValues('x-prism-fallback') }
+        CostUSD  = if ($headers['x-prism-cost-usd']) { $headers['x-prism-cost-usd'] } else { $headers.GetValues('x-prism-cost-usd') }
+        Body     = $content
     } | Format-List
 }
 ```
