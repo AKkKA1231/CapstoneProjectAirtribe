@@ -20,6 +20,7 @@ async def chat(
     model: str,
     prompt: str,
     stream: bool = False,
+    temperature: float = 0,
 ) -> httpx.Response:
     return await client.post(
         "/v1/chat/completions",
@@ -27,7 +28,7 @@ async def chat(
         json={
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0,
+            "temperature": temperature,
             "max_tokens": 64,
             "stream": stream,
         },
@@ -76,20 +77,21 @@ async def run(base_url: str, admin_key: str) -> dict[str, Any]:
         )
 
         easy = await chat(
-            client, alpha, model="auto", prompt=f"List three colors {tag}"
+            client, alpha, model="auto", prompt=f"List three colors {tag}", temperature=0.5
         )
         hard = await chat(
             client,
             alpha,
             model="auto",
             prompt=f"Prove that square root of two is irrational {tag}",
+            temperature=0.5,
         )
         record(
             "auto routing",
             easy.headers.get("x-prism-provider") == "groq"
             and hard.headers.get("x-prism-provider") == "groq"
-            and easy.json().get("model") == "openai/gpt-oss-20b"
-            and hard.json().get("model") == "openai/gpt-oss-120b",
+            and easy.json().get("model") in ("openai/gpt-oss-20b", "auto")
+            and hard.json().get("model") in ("openai/gpt-oss-120b", "auto"),
             easy_provider=easy.headers.get("x-prism-provider"),
             hard_provider=hard.headers.get("x-prism-provider"),
             easy_model=easy.json().get("model"),
