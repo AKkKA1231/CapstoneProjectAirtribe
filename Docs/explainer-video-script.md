@@ -157,10 +157,10 @@ $streamBody = @{
     stream = $true
 } | ConvertTo-Json -Depth 5 -Compress
 
-curl.exe -N "$base/v1/chat/completions" `
+$streamBody | curl.exe -N "$base/v1/chat/completions" `
     -H "Authorization: Bearer $alphaKey" `
     -H 'Content-Type: application/json' `
-    --data-binary $streamBody
+    --data-binary '@-'
 ```
 
 ### Say

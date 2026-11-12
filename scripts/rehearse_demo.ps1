@@ -12,10 +12,10 @@ function Send-Prism {
     param([string]$Key, [string]$Model, [string]$Prompt)
 
     $body = @{
-        model = $Model
-        messages = @(@{ role = 'user'; content = $Prompt })
+        model       = $Model
+        messages    = @(@{ role = 'user'; content = $Prompt })
         temperature = 0
-        max_tokens = 64
+        max_tokens  = 64
     } | ConvertTo-Json -Depth 5 -Compress
 
     $statusCode = 0
@@ -39,7 +39,8 @@ function Send-Prism {
             $statusCode = [int]$_.Exception.Response.StatusCode
             $headers = $_.Exception.Response.Headers
             $content = if ($_.ErrorDetails) { $_.ErrorDetails.Message } else { $_.Exception.Message }
-        } else {
+        }
+        else {
             throw $_
         }
     }
@@ -117,17 +118,17 @@ Send-Prism -Key $alphaKey -Model 'fast' -Prompt "Hello from the Prism recording 
 
 Write-Host "`n2. True SSE Streaming pass-through (token-by-token):" -ForegroundColor Cyan
 $streamBody = @{
-    model = 'fast'
-    messages = @(@{ role = 'user'; content = "Stream a short explanation of Prism $demoTag" })
+    model       = 'fast'
+    messages    = @(@{ role = 'user'; content = "Stream a short explanation of Prism $demoTag" })
     temperature = 0
-    max_tokens = 64
-    stream = $true
+    max_tokens  = 64
+    stream      = $true
 } | ConvertTo-Json -Depth 5 -Compress
 
-curl.exe -N "$base/v1/chat/completions" `
+$streamBody | curl.exe -N "$base/v1/chat/completions" `
     -H "Authorization: Bearer $alphaKey" `
     -H 'Content-Type: application/json' `
-    --data-binary $streamBody
+    --data-binary '@-'
 
 Read-Host "`nPress [Enter] to move to Scene 5..."
 
