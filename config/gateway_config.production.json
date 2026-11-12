@@ -1,0 +1,31 @@
+{
+  "providers": [
+    {
+      "name": "groq",
+      "base_url": "https://api.groq.com/openai/v1",
+      "api_key_env_var": "GROQ_API_KEY",
+      "timeout_ms": 60000
+    }
+  ],
+  "aliases": [
+    {
+      "alias": "fast",
+      "tier": "fast",
+      "primary": {"provider": "groq", "model": "openai/gpt-oss-20b"},
+      "fallbacks": []
+    },
+    {
+      "alias": "smart",
+      "tier": "smart",
+      "primary": {"provider": "groq", "model": "openai/gpt-oss-120b"},
+      "fallbacks": []
+    },
+    {"alias": "auto", "tier": "auto", "primary": null, "fallbacks": []}
+  ],
+  "cache": {
+    "enabled": true,
+    "ttl_seconds": 86400,
+    "similarity_threshold": 0.82,
+    "schema_version": 1
+  }
+}

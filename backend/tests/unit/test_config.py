@@ -26,3 +26,22 @@ def test_production_requires_api_docs_to_be_disabled() -> None:
             admin_api_key="a-production-admin-key",
             expose_api_docs=True,
         )
+
+
+def test_standard_postgres_url_is_normalized_for_asyncpg() -> None:
+    settings = Settings(
+        environment="development",
+        database_url="postgresql://user:pass@db.example.com:5432/postgres",
+    )
+
+    assert settings.database_url.startswith("postgresql+asyncpg://")
+
+
+def test_production_requires_production_seed_files() -> None:
+    with pytest.raises(ValidationError, match="PRISM_SEED_GATEWAY_FILE"):
+        Settings(
+            environment="production",
+            auth_pepper="a-production-pepper",
+            admin_api_key="a-production-admin-key",
+            expose_api_docs=False,
+        )

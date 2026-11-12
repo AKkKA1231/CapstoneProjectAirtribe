@@ -36,3 +36,18 @@ def test_virtual_key_digest_is_deterministic_and_pepper_scoped() -> None:
     assert first != different_pepper
     assert len(first) == 64
     assert raw_key not in first
+
+
+def test_production_seed_bundle_uses_only_real_provider_and_no_committed_keys() -> None:
+    repository_root = Path(__file__).resolve().parents[3]
+
+    bundle = load_seed_bundle(
+        repository_root / "config",
+        gateway_file="gateway_config.production.json",
+        pricing_file="model_pricing.production.json",
+        keys_file="seed_keys.production.json",
+    )
+
+    assert [provider.name for provider in bundle.gateway.providers] == ["groq"]
+    assert {alias.alias for alias in bundle.gateway.aliases} == {"fast", "smart", "auto"}
+    assert bundle.keys == []

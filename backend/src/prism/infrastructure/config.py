@@ -1,10 +1,11 @@
 """Validated application configuration."""
 
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEVELOPMENT_AUTH_PEPPER = "development-only-change-this-auth-pepper"
@@ -37,6 +38,13 @@ class Settings(BaseSettings):
     database_statement_timeout_seconds: int = Field(default=15, ge=1, le=300)
     database_lock_timeout_ms: int = Field(default=2_000, ge=100, le=60_000)
     seed_config_dir: Path = Path("../config")
+    seed_gateway_file: str = "gateway_config.sample.json"
+    seed_pricing_file: str = "model_pricing.json"
+    seed_keys_file: str = "seed_keys.json"
+    bootstrap_tenant_key: SecretStr | None = None
+    bootstrap_tenant_name: str = "Production Tenant"
+    bootstrap_tenant_rpm_limit: int = Field(default=60, gt=0)
+    bootstrap_tenant_monthly_budget_usd: Decimal = Field(default=Decimal("25.00"), ge=0)
 
     provider_connect_timeout_seconds: float = Field(default=5.0, gt=0, le=60)
     provider_read_timeout_seconds: float = Field(default=60.0, gt=0, le=600)
@@ -60,6 +68,17 @@ class Settings(BaseSettings):
     auth_pepper: SecretStr = SecretStr(DEVELOPMENT_AUTH_PEPPER)
     admin_api_key: SecretStr = SecretStr(DEVELOPMENT_ADMIN_KEY)
 
+    @field_validator("database_url")
+    @classmethod
+    def normalize_async_postgres_url(cls, value: str) -> str:
+        """Accept standard managed-Postgres URLs while using the asyncpg driver."""
+
+        if value.startswith("postgres://"):
+            return value.replace("postgres://", "postgresql+asyncpg://", 1)
+        if value.startswith("postgresql://"):
+            return value.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return value
+
     @model_validator(mode="after")
     def validate_production_secrets(self) -> Self:
         """Refuse known development credentials in production."""
@@ -75,6 +94,10 @@ class Settings(BaseSettings):
             raise ValueError("PRISM_EXPOSE_API_DOCS must be false in production")
         if "*" in self.cors_allowed_origins:
             raise ValueError("PRISM_CORS_ALLOWED_ORIGINS must not contain '*' in production")
+        if self.seed_gateway_file == "gateway_config.sample.json":
+            raise ValueError("PRISM_SEED_GATEWAY_FILE must use a production seed file")
+        if self.seed_keys_file == "seed_keys.json":
+            raise ValueError("PRISM_SEED_KEYS_FILE must use a production seed file")
         return self
 
 

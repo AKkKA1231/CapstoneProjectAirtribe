@@ -177,7 +177,7 @@ export default function App() {
         </header>
 
         {error && <div className="error" role="alert"><strong>Couldn’t load data.</strong> {error}</div>}
-        {!connected && !loading && !error && <section className="welcome"><p className="eyebrow">SECURE ADMIN VIEW</p><h2>See how every request moves through Prism.</h2><p>Enter the development admin key to inspect spend, routing, cache behavior, and provider reliability. The key remains only in this page’s memory.</p></section>}
+        {!connected && !loading && !error && <section className="welcome"><p className="eyebrow">SECURE ADMIN VIEW</p><h2>See how every request moves through Prism.</h2><p>Enter the configured admin bearer key to inspect spend, routing, cache behavior, and provider reliability. The key remains only in this page’s memory.</p></section>}
 
         {connected && tab === "overview" && <>
           <section className="cards">

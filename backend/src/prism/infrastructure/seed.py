@@ -97,19 +97,24 @@ class SeedBundle(StrictSeedModel):
     keys: list[VirtualKeySeed]
 
 
-def load_seed_bundle(config_dir: Path) -> SeedBundle:
+def load_seed_bundle(
+    config_dir: Path,
+    gateway_file: str = "gateway_config.sample.json",
+    pricing_file: str = "model_pricing.json",
+    keys_file: str = "seed_keys.json",
+) -> SeedBundle:
     """Load and validate all seed files before opening a database transaction."""
 
     gateway = GatewaySeed.model_validate_json(
-        (config_dir / "gateway_config.sample.json").read_text(encoding="utf-8")
+        (config_dir / gateway_file).read_text(encoding="utf-8")
     )
     pricing = [
         PricingSeed.model_validate(item)
-        for item in json.loads((config_dir / "model_pricing.json").read_text(encoding="utf-8"))
+        for item in json.loads((config_dir / pricing_file).read_text(encoding="utf-8"))
     ]
     keys = [
         VirtualKeySeed.model_validate(item)
-        for item in json.loads((config_dir / "seed_keys.json").read_text(encoding="utf-8"))
+        for item in json.loads((config_dir / keys_file).read_text(encoding="utf-8"))
     ]
 
     provider_names = {provider.name for provider in gateway.providers}
@@ -308,6 +313,10 @@ async def seed_database(settings: Settings, bundle: SeedBundle) -> None:
     database = DatabaseManager(settings)
     try:
         async with database.session() as session, session.begin():
+            # Treat the selected seed profile as the active routing source of truth.
+            # Historical rows remain available for audit foreign keys, but cannot route traffic.
+            await session.execute(update(ModelAlias).values(is_active=False))
+            await session.execute(update(Provider).values(is_active=False))
             provider_ids = await _seed_providers(session, bundle.gateway.providers)
             alias_ids = await _seed_aliases(session, bundle.gateway.aliases, provider_ids)
             await _seed_pricing(session, bundle.pricing, provider_ids)
@@ -321,7 +330,23 @@ async def run() -> None:
 
     settings = get_settings()
     configure_logging(settings)
-    bundle = load_seed_bundle(settings.seed_config_dir)
+    bundle = load_seed_bundle(
+        settings.seed_config_dir,
+        gateway_file=settings.seed_gateway_file,
+        pricing_file=settings.seed_pricing_file,
+        keys_file=settings.seed_keys_file,
+    )
+    if settings.bootstrap_tenant_key is not None:
+        bundle.keys.append(
+            VirtualKeySeed(
+                key=settings.bootstrap_tenant_key.get_secret_value(),
+                tenant_name=settings.bootstrap_tenant_name,
+                description="Environment-provisioned production tenant key",
+                allowed_aliases=["fast", "smart", "auto"],
+                rpm_limit=settings.bootstrap_tenant_rpm_limit,
+                monthly_budget_usd=settings.bootstrap_tenant_monthly_budget_usd,
+            )
+        )
     await seed_database(settings, bundle)
     logger.info(
         "seed_completed",
