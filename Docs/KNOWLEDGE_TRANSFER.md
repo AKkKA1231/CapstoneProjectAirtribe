@@ -31,6 +31,8 @@ The repository's documentation lives in the `Docs/` directory:
 | **Problem Statement** | [`Docs/problemStatement.md`](./problemStatement.md) | Exhaustive breakdown of requirements, background, functional requirements (FR-01 to FR-14), non-functional requirements (NFR-01 to NFR-08), evaluation criteria, and deliverables. |
 | **Data Model** | [`Docs/DataModel.md`](./DataModel.md) | Full PostgreSQL DDL for all 11 tables (`virtual_keys`, `admission_counters`, `budget_reservations`, `request_logs`, `provider_attempts`, `cache_entries` with `pgvector`, `model_pricing`, etc.). |
 | **High Level Design** | [`Docs/HLD.md`](./HLD.md) | Analysis of 3 architectural approaches: **Approach A (Custom Async Monolith - Chosen/Recommended)**, Approach B (LiteLLM Hook Extension), Approach C (Microservices + Redis). |
+| **Architecture** | [`Docs/Architecture.md`](./Architecture.md) | Accepted modular-monolith design, component boundaries, request flows, invariants, security, deployment, and testing architecture. |
+| **Implementation Plan** | [`Docs/implementationPlan.md`](./implementationPlan.md) | Five-phase, ten-day delivery plan with tasks, definitions of done, verification gates, risks, and demonstration milestones. |
 | **Knowledge Transfer** | *This file (`Docs/KNOWLEDGE_TRANSFER.md`)* | Bridge for Codex/Antigravity handover. |
 
 *Original Airtribe reference PDFs:*
@@ -41,20 +43,21 @@ The repository's documentation lives in the `Docs/` directory:
 
 ## 3. Core Technical Decisions & Non-Negotiables
 
-### 3.1 Architectural Selection: Approach A (Custom Async Python Monolith)
+### 3.1 Architectural Selection: Approach A (Modular Monolith with Ports and Adapters)
 - **Framework:** Python 3.12+ with **FastAPI** + `asyncio` + `uvicorn`.
 - **Database:** **PostgreSQL 16** with **`pgvector`** extension (used for relational tables, counters, logs, and vector semantic cache).
 - **HTTP Client:** `httpx.AsyncClient` with custom timeouts per provider.
+- **Internal boundaries:** API, application, domain, ports, and infrastructure adapters remain separate even though the backend is deployed as one service.
 - **Why Approach A:** Direct ownership and visibility of the admission locking, streaming pipeline, error contracts, and custom headers required for the capstone assessment.
 
-### 3.2 Provider Keys & Mocks (Crucial Clarification)
-- **Do we need OpenRouter or paid external API keys?** **NO.**
-- The project requirement explicitly states: *"One OpenAI-compatible POST /v1/chat/completions endpoint in front of at least 2 providers (mocks count)."*
-- Testing and evaluation will run with **two local mock provider adapters** (e.g., Mock Provider A and Mock Provider B) to simulate:
+### 3.2 Groq Provider Key and Mocks
+- Normal `fast` and `smart` traffic uses Groq through `https://api.groq.com/openai/v1` and requires `GROQ_API_KEY` in the ignored `.env` file.
+- Clients never receive or submit the Groq secret. They authenticate to Prism with tenant-scoped virtual keys such as `prism-demo-team-alpha`.
+- Two local mock providers remain available through the explicit `mock-fast` alias to simulate:
   - Streaming SSE tokens
   - Latency and timeouts
   - 429 Rate Limits and 500 Failures (to trigger fallback)
-- Real providers (e.g., OpenAI via `OPENAI_API_KEY`) can optionally be attached as an environment variable without core changes.
+- Groq and the mocks share the same provider adapter, retry, logging, streaming, accounting, and settlement path.
 
 ### 3.3 The Response Header Contract
 Every response from `/v1/chat/completions` (including cached and fallback responses) MUST return these HTTP headers:
@@ -75,7 +78,7 @@ Every response from `/v1/chat/completions` (including cached and fallback respon
 ### 3.5 Semantic Cache Scoping
 - Semantic lookups MUST be scoped by:
   `WHERE key_id = :key_id AND scope_hash = :scope_hash`
-- `scope_hash` = SHA-256 of `(model_alias + system_prompt + temperature + max_tokens)`.
+- `scope_hash` is derived from deterministic serialization of the full response-affecting context: complete conversation, instructions, resolved routing policy, generation settings, tools, response format, and cache/embedding schema versions.
 - Prevents cross-tenant data leaks and prevents serving responses generated under different system instructions.
 
 ---
@@ -87,20 +90,40 @@ Every response from `/v1/chat/completions` (including cached and fallback respon
 - [x] Generated comprehensive `problemStatement.md`.
 - [x] Generated production-ready `DataModel.md` (DDL, indexing, `pgvector`, settlement schemas).
 - [x] Generated `HLD.md` evaluating 3 architectural designs and selecting Approach A.
+- [x] Generated `Architecture.md` with the accepted modular-monolith design and detailed request flows.
+- [x] Generated `implementationPlan.md` with five phases across ten focused delivery days.
 - [x] Clarified provider dependencies (zero paid key requirement; mock-first strategy).
+- [x] Implemented the Phase 1 backend foundation: FastAPI package structure, validated settings, structured logging, shared HTTP/database lifecycle, health endpoints, quality tooling, and CI.
+- [x] Added the refined SQLAlchemy schema, initial Alembic migration, PostgreSQL/pgvector Compose service, validated seed configuration, and idempotent seed loader.
+- [x] Verified Ruff, strict Mypy, Alembic offline rendering, 19 tests, and the 80% coverage gate (83.73% achieved).
+- [x] Completed the live-infrastructure gate on Docker Desktop: PostgreSQL is healthy, pgvector is enabled, Alembic is at `0001_initial_schema`, and health endpoints return `ok`. The current seed contains Groq plus two deterministic mock providers, four aliases, and four virtual keys.
+- [x] Completed Phase 2 security: HMAC-SHA-256 virtual-key authentication, distinct missing/invalid/inactive/expired errors, safe security-event persistence, admin-key separation, and tenant alias allowlists.
+- [x] Added authenticated OpenAI-compatible `GET /v1/models`; Team Alpha also receives the test-only `mock-fast` alias, while Team Beta remains limited to `auto`/`fast`.
+- [x] Completed Phase 2 atomic accounting: decimal cost estimates, pricing lookup, row-locked RPM/monthly-budget admission, committed reservations, idempotent settlement, and non-billable release.
+- [x] Verified Phase 2 with 32 passing tests on Python 3.12 and PostgreSQL, including a 10-request concurrency race with zero over-admission; coverage is 85.21%.
+- [x] Completed Phase 3 provider execution with a provider-neutral contract, pooled OpenAI-compatible HTTP adapter, bounded retry/backoff, ordered failover, and one persisted record per physical provider call.
+- [x] Added two separate deterministic HTTP mock-provider containers supporting success, 429/503, fatal errors, malformed responses, streaming, usage, and incomplete-stream scenarios.
+- [x] Added authenticated `POST /v1/chat/completions` for non-streaming JSON and true SSE streaming, including all required `x-prism-*` headers.
+- [x] Enforced the stream-commitment invariant: pre-content failures may retry/fail over; post-content failures never do, never emit `[DONE]`, and settle conservatively as `partial_stream_error`.
+- [x] Verified Phase 3 with 43 passing Python 3.12 tests and 81.41% coverage plus live Docker demonstrations of primary success, fallback success, clean streaming, partial-stream failure, and fatal non-billable release.
+- [x] Completed Phase 4 intelligent routing with deterministic `fast`/`smart` aliases, the explainable versioned `rules-v1` `auto` classifier, tenant-policy downgrade/override behavior, and persisted reason/confidence/version telemetry.
+- [x] Added committed routing evaluation cases and `scripts/routing_eval.py`; the classifier scores 100% on 10 cases and all traps versus 40% for the length-only baseline.
+- [x] Completed the tenant-scoped semantic cache using a deterministic 1,536-dimension local embedding adapter, exact pgvector cosine search, TTL, conservative temperature eligibility, schema/model version filtering, hit counters, and full configuration scope hashing.
+- [x] Added JSON and SSE cache-hit replay, zero-cost reservation release, cache response headers, request-log linkage, tool-call exclusion, and fail-open behavior for lookup/store infrastructure errors.
+- [x] Verified Phase 4 with 55 passing Python 3.12 tests and 80.89% branch coverage, including real PostgreSQL/pgvector checks for paraphrase similarity, negative near-miss rejection, TTL, hit counters, cross-key isolation, and configuration isolation.
+- [x] Live Docker verification proved Alpha `auto` reasoning routes to `smart`/Mock B, Beta policy downgrades it to `fast`/Mock A, a paraphrase returns a zero-cost cache hit, other tenants and contexts miss, and cached streams end with `[DONE]`.
+- [x] Completed Phase 5 admin operations APIs for usage, recent requests, cache statistics, and provider attempts with bounded pagination and tenant/date/status/provider/cache/fallback filters.
+- [x] Added the responsive React/Vite operations console, production Nginx image, safe in-memory admin authentication, and loading/empty/error/filter states without exposing keys, digests, fingerprints, or prompts.
+- [x] Added periodic and on-demand stale-reservation reconciliation protected by a PostgreSQL advisory lock; no-attempt reservations are released and potentially billable attempts are explicitly flagged.
+- [x] Added explicit CORS, structured request metrics, admin-protected Prometheus exposition, provider-attempt/cache/fallback metrics, settlement-failure counters, and database readiness.
+- [x] Added reproducible smoke, load, routing, cache, and accounting scripts plus Phase 4/5 verification reports, the root README, and the explainer-video script.
+- [x] Final verification: 61 passing Python 3.12 tests, 82.62% branch coverage, strict Mypy/Ruff clean, React production build clean, nine smoke paths passed, 20/20 load requests succeeded at 134.05 ms p95, all accounting counter totals matched, and an isolated clean-volume Docker Compose startup passed.
 
 ### What Needs to Be Done Next:
-1. **Create `Docs/Architecture.md`**:
-   - Detailed component breakdown: Auth Middleware, Admission Controller, Routing Engine & Difficulty Classifier, Provider Adapter Interface, SSE Streaming Handler, Semantic Cache Engine, Accounting & Logging Subsystem.
-   - Sequence diagrams for: Non-streaming Cache Miss, Cache Hit, Streaming Pass-Through, Provider Failover mid-request, Budget Rejection.
-2. **Create `Docs/implementationPlan.md`**:
-   - Concrete 5-phase breakdown (Days 1–10 schedule matching the Airtribe brief).
-   - Definition of Done (DoD) per phase.
-3. **Phase 1 Execution (Foundation & Scaffolding)**:
-   - Project directory structure (`src/`, `tests/`, `scripts/`, `migrations/`).
-   - `docker-compose.yml` for PostgreSQL + `pgvector`.
-   - Seed data ingestion: `model_pricing.json`, `seed_keys.json`, `gateway_config.sample.json`.
-   - Mock provider adapters (streaming + non-streaming).
+1. **Prepare submission and version control**:
+   - Review the complete working tree, create a feature commit, and push it to the intended GitHub branch.
+   - Record the final explainer video using `Docs/explainer-video-script.md` and the exact demonstration order in the README.
+   - Replace local development credentials and configure TLS/operator identity before any non-local deployment.
 
 ---
 
@@ -130,13 +153,13 @@ Hello! We are working on the "Prism: LLM Gateway and Semantic Cache" Airtribe Ca
 
 Please do the following before writing code:
 1. Read `Docs/KNOWLEDGE_TRANSFER.md` to understand our architecture, tech stack, and progress.
-2. Review `Docs/problemStatement.md`, `Docs/DataModel.md`, and `Docs/HLD.md`.
+2. Review `Docs/problemStatement.md`, `Docs/DataModel.md`, `Docs/HLD.md`, `Docs/Architecture.md`, and `Docs/implementationPlan.md`.
 3. Note our key architectural choices:
-   - Approach A: FastAPI + PostgreSQL 16 + pgvector.
+   - Modular monolith with ports and adapters: FastAPI + PostgreSQL 16 + pgvector.
    - Strict atomic admission using `SELECT FOR UPDATE` on admission_counters (never hold locks over network calls).
    - Mocks are sufficient for the 2 providers; no OpenRouter key needed.
    - Required headers: x-prism-provider, x-prism-cache, x-prism-fallback, x-prism-cost-usd.
 
-Please confirm you have digested this context, and summarize what we are building next (Docs/Architecture.md and Docs/implementationPlan.md).
+Please confirm you have digested this context, then continue with Phase 4 from `Docs/implementationPlan.md`.
 ```
 

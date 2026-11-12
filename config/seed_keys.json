@@ -1,0 +1,35 @@
+[
+  {
+    "key": "prism-demo-team-alpha",
+    "tenant_name": "Team Alpha",
+    "description": "Demo key with access to all routing aliases",
+    "allowed_aliases": ["fast", "smart", "auto", "mock-fast"],
+    "rpm_limit": 60,
+    "monthly_budget_usd": "10.0000000000"
+  },
+  {
+    "key": "prism-demo-team-beta",
+    "tenant_name": "Team Beta",
+    "description": "Isolation-test key with fast-only direct access",
+    "allowed_aliases": ["fast", "auto"],
+    "rpm_limit": 30,
+    "monthly_budget_usd": "5.0000000000"
+  },
+  {
+    "key": "prism-demo-rpm-limited",
+    "tenant_name": "RPM Demo",
+    "description": "Demonstration-only key with a two-request RPM limit",
+    "allowed_aliases": ["fast"],
+    "rpm_limit": 2,
+    "monthly_budget_usd": "10.0000000000"
+  },
+  {
+    "key": "prism-demo-budget-limited",
+    "tenant_name": "Budget Demo",
+    "description": "Demonstration-only key whose first provider reservation exceeds budget",
+    "allowed_aliases": ["fast"],
+    "rpm_limit": 60,
+    "monthly_budget_usd": "0.0000010000"
+  }
+]
+

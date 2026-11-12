@@ -1,0 +1,56 @@
+{
+  "providers": [
+    {
+      "name": "groq",
+      "base_url": "https://api.groq.com/openai/v1",
+      "api_key_env_var": "GROQ_API_KEY",
+      "timeout_ms": 60000
+    },
+    {
+      "name": "mock-a",
+      "base_url": "http://mock-provider-a:8101/v1",
+      "api_key_env_var": null,
+      "timeout_ms": 30000
+    },
+    {
+      "name": "mock-b",
+      "base_url": "http://mock-provider-b:8102/v1",
+      "api_key_env_var": null,
+      "timeout_ms": 30000
+    }
+  ],
+  "aliases": [
+    {
+      "alias": "fast",
+      "tier": "fast",
+      "primary": {"provider": "groq", "model": "openai/gpt-oss-20b"},
+      "fallbacks": [
+        {"provider": "mock-a", "model": "mock-fast-v1"},
+        {"provider": "mock-b", "model": "mock-fast-v1"}
+      ]
+    },
+    {
+      "alias": "smart",
+      "tier": "smart",
+      "primary": {"provider": "groq", "model": "openai/gpt-oss-120b"},
+      "fallbacks": [
+        {"provider": "mock-b", "model": "mock-smart-v1"},
+        {"provider": "mock-a", "model": "mock-smart-v1"}
+      ]
+    },
+    {
+      "alias": "mock-fast",
+      "tier": "fast",
+      "primary": {"provider": "mock-a", "model": "mock-fast-v1"},
+      "fallbacks": [{"provider": "mock-b", "model": "mock-fast-v1"}]
+    },
+    {"alias": "auto", "tier": "auto", "primary": null, "fallbacks": []}
+  ],
+  "cache": {
+    "enabled": true,
+    "ttl_seconds": 86400,
+    "similarity_threshold": 0.82,
+    "schema_version": 1
+  }
+}
+

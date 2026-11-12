@@ -44,6 +44,9 @@ venv.bak/
 .coverage
 htmlcov/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage.xml
 
 # OS specific
 Thumbs.db
@@ -52,3 +55,7 @@ Desktop.ini
 
 # Logs
 *.log
+
+# Frontend dependencies
+node_modules/
+*.tsbuildinfo

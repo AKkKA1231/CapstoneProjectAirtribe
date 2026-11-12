@@ -1,0 +1,16 @@
+{
+  "source": "Explain semantic caching for an automobile",
+  "threshold": 0.82,
+  "cases": [
+    {
+      "id": "approved-paraphrase",
+      "text": "Describe semantic cache for a car",
+      "expected_hit": true
+    },
+    {
+      "id": "negative-near-match",
+      "text": "Explain how to bake a chocolate cake",
+      "expected_hit": false
+    }
+  ]
+}

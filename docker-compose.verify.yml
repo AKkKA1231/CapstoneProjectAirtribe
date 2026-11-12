@@ -1,0 +1,14 @@
+# Removes host port publishing so a clean, isolated verification stack can run
+# beside the developer stack: docker compose -p prismfresh -f docker-compose.yml
+# -f docker-compose.verify.yml up --build -d
+services:
+  mock-provider-a:
+    ports: !reset []
+  mock-provider-b:
+    ports: !reset []
+  postgres:
+    ports: !reset []
+  gateway:
+    ports: !reset []
+  console:
+    ports: !reset []
