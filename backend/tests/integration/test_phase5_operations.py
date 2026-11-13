@@ -87,11 +87,15 @@ async def cleanup(database: DatabaseManager, key_id: UUID) -> None:
         await session.execute(delete(VirtualKey).where(VirtualKey.id == key_id))
 
 
-async def provider_id(database: DatabaseManager) -> UUID:
+async def provider_record(database: DatabaseManager) -> tuple[UUID, str]:
     async with database.session() as session:
-        value = await session.scalar(select(Provider.id).where(Provider.name == "mock-a"))
+        value = (
+            await session.execute(
+                select(Provider.id, Provider.name).order_by(Provider.name).limit(1)
+            )
+        ).one_or_none()
     assert value is not None
-    return value
+    return value.id, value.name
 
 
 @pytest.mark.asyncio
@@ -99,7 +103,7 @@ async def test_ops_repository_and_admin_api_are_filtered_bounded_and_safe(
     database: DatabaseManager,
 ) -> None:
     key_id = await create_tenant(database)
-    selected_provider = await provider_id(database)
+    selected_provider, selected_provider_name = await provider_record(database)
     now = datetime.now(UTC)
     request_id = uuid4()
     async with database.session() as session, session.begin():
@@ -151,7 +155,7 @@ async def test_ops_repository_and_admin_api_are_filtered_bounded_and_safe(
         filters = OpsFilters(
             tenant_id=key_id,
             status="success",
-            provider="mock-a",
+            provider=selected_provider_name,
             cache_hit=True,
             fallback=True,
         )
@@ -165,7 +169,7 @@ async def test_ops_repository_and_admin_api_are_filtered_bounded_and_safe(
         assert usage[0].cache_hits == 1
         assert usage[0].fallbacks == 1
         assert requests.total == 1 and len(requests.items) == 1
-        assert attempts.total == 1 and attempts.items[0].provider == "mock-a"
+        assert attempts.total == 1 and attempts.items[0].provider == selected_provider_name
         assert cache[0].request_count == 1 and cache[0].request_cache_hits == 1
         assert not hasattr(requests.items[0], "request_fingerprint")
         assert not hasattr(requests.items[0], "key_digest")
@@ -216,7 +220,7 @@ async def test_reconciler_lock_release_and_ambiguous_attempt_flagging(
     database: DatabaseManager,
 ) -> None:
     key_id = await create_tenant(database, Decimal("0.6"))
-    selected_provider = await provider_id(database)
+    selected_provider, _ = await provider_record(database)
     now = datetime.now(UTC)
     stale = now - timedelta(hours=1)
     safe_request = uuid4()
