@@ -1,0 +1,72 @@
+services:
+  mock-provider-a:
+    build:
+      context: .
+      dockerfile: mock-providers/Dockerfile
+    environment:
+      MOCK_PROVIDER_NAME: mock-a
+    ports:
+      - "8101:8101"
+    restart: unless-stopped
+
+  mock-provider-b:
+    build:
+      context: .
+      dockerfile: mock-providers/Dockerfile
+    environment:
+      MOCK_PROVIDER_NAME: mock-b
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8102"]
+    ports:
+      - "8102:8102"
+    restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: prism
+      POSTGRES_USER: prism
+      POSTGRES_PASSWORD: prism
+    ports:
+      - "5432:5432"
+    volumes:
+      - prism-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prism -d prism"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - .env
+    environment:
+      PRISM_DATABASE_URL: postgresql+asyncpg://prism:prism@postgres:5432/prism
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mock-provider-a:
+        condition: service_started
+      mock-provider-b:
+        condition: service_started
+    restart: unless-stopped
+
+  console:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      gateway:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  prism-postgres-data:
+

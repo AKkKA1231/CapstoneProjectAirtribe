@@ -1,0 +1,12 @@
+[
+  {"id":"short-proof","prompt":"Prove that the square root of two is irrational.","expected":"smart","trap":true},
+  {"id":"short-debug","prompt":"Debug this deadlock between two database transactions.","expected":"smart","trap":true},
+  {"id":"architecture","prompt":"Analyze the architecture tradeoff between queues and synchronous calls.","expected":"smart","trap":false},
+  {"id":"coding","prompt":"Implement an algorithm that detects cycles in a directed graph.","expected":"smart","trap":false},
+  {"id":"simple-list","prompt":"List the three primary colors.","expected":"fast","trap":false},
+  {"id":"simple-extract","prompt":"Extract the invoice number from: Invoice INV-1042 dated Monday.","expected":"fast","trap":false},
+  {"id":"simple-translate","prompt":"Translate good morning into French.","expected":"fast","trap":false},
+  {"id":"default-chat","prompt":"Hello, how are you today?","expected":"fast","trap":false},
+  {"id":"long-summary-trap","prompt":"Summarize this passage in one sentence: The neighborhood library opens every weekday morning and closes in the evening. It lends books, provides quiet desks, hosts a weekly reading club, and offers free membership to all local residents.","expected":"fast","trap":true},
+  {"id":"long-format-trap","prompt":"Format the following ordinary names as a comma-separated line without adding commentary: Asha, Ravi, Mina, John, Fatima, Chen, Diego, Elena, Grace, Haruto, Imani, Jakob, Kavya, Luis, Maya, Noah, Olivia, Priya, Quinn, Rosa, Sam, Tara, Uma, Victor, Wen, Ximena, Yusuf, Zara.","expected":"fast","trap":true}
+]

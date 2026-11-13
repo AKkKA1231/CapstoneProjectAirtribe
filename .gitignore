@@ -31,6 +31,7 @@ venv.bak/
 # Environment Variables & Secrets
 .env
 .env.local
+.env.*.local
 *.pem
 *.key
 
@@ -44,6 +45,9 @@ venv.bak/
 .coverage
 htmlcov/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage.xml
 
 # OS specific
 Thumbs.db
@@ -52,3 +56,12 @@ Desktop.ini
 
 # Logs
 *.log
+
+# Generated demo and recording artifacts
+Docs/.rendered_*/
+Docs/*_draft.docx
+reports/video_frames/
+
+# Frontend dependencies
+node_modules/
+*.tsbuildinfo

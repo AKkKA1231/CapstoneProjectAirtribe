@@ -1,0 +1,14 @@
+[
+  {
+    "provider": "groq",
+    "model": "openai/gpt-oss-20b",
+    "input_cost_per_1k": "0.0000750000",
+    "output_cost_per_1k": "0.0003000000"
+  },
+  {
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "input_cost_per_1k": "0.0001500000",
+    "output_cost_per_1k": "0.0006000000"
+  }
+]

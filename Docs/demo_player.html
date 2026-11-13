@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prism Capstone — Interactive Video Demo & Rehearsal Player</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --border: #1f293d;
+      --primary: #38bdf8;
+      --primary-dim: #0284c7;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #10b981;
+      --warn: #f59e0b;
+      --err: #ef4444;
+      --font-mono: 'Consolas', 'Fira Code', 'Courier New', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #0f172a;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-badge {
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      color: #090d16;
+      font-weight: 800;
+      font-size: 18px;
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+    }
+    .title-group h1 { font-size: 18px; font-weight: 700; color: #fff; }
+    .title-group p { font-size: 12px; color: var(--text-muted); }
+
+    .player-container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      overflow: hidden;
+      height: calc(100vh - 140px);
+    }
+    .playlist {
+      background: #0d1322;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .scene-item {
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: #141c2e;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .scene-item:hover {
+      background: #1a243a;
+      border-color: #2e3d5b;
+    }
+    .scene-item.active {
+      background: #1e293b;
+      border-color: var(--primary);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+    }
+    .scene-item .header-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .scene-item .scene-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .scene-item .scene-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .stage {
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 24px 32px;
+      gap: 20px;
+      background: radial-gradient(circle at top right, #111a2e, #090d16);
+    }
+    .stage-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .stage-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-blue { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+    .narration-box {
+      background: #172033;
+      border-left: 4px solid var(--primary);
+      padding: 16px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+    .narration-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .narration-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #e2e8f0;
+      font-style: italic;
+    }
+
+    .terminal-window {
+      background: #0a0e17;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+    .terminal-topbar {
+      background: #131b2c;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-green { background: #10b981; }
+    .terminal-title {
+      font-size: 11px;
+      color: #64748b;
+      margin-left: 8px;
+    }
+    .terminal-body {
+      padding: 16px;
+      color: #cbd5e1;
+      line-height: 1.5;
+      overflow-x: auto;
+      max-height: 380px;
+    }
+    .cmd-line { color: #38bdf8; font-weight: 600; margin-bottom: 8px; }
+    .cmd-line::before { content: "PS > "; color: #64748b; }
+    .output-line { color: #94a3b8; white-space: pre-wrap; }
+    .highlight-pass { color: #34d399; font-weight: bold; }
+    .highlight-val { color: #fbbf24; }
+
+    footer.controls-bar {
+      background: #0f172a;
+      border-top: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 70px;
+    }
+    .btn {
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid #334155;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .btn:hover { background: #334155; border-color: #475569; }
+    .btn-primary { background: var(--primary); color: #090d16; border: none; }
+    .btn-primary:hover { background: #7dd3fc; }
+    .btn-accent { background: #059669; color: #fff; border: none; }
+    .btn-accent:hover { background: #10b981; }
+
+    .progress-bar-container {
+      flex: 1;
+      max-width: 400px;
+      margin: 0 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .progress-bar {
+      height: 6px;
+      background: #1e293b;
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #818cf8);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .time-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="logo-badge">P</div>
+      <div class="title-group">
+        <h1>Prism — Explainer Video Rehearsal Player</h1>
+        <p>Interactive Visual Walkthrough & Spoken Rehearsal Guide</p>
+      </div>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <button class="btn btn-accent" id="autoPlayBtn" onclick="toggleAutoPlay()">
+        <span>▶ Play Voiceover & Auto-Advance</span>
+      </button>
+      <button class="btn" onclick="openDocs()">
+        <span>📄 Open Script Doc</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="player-container">
+    <div class="playlist" id="playlist">
+      <!-- Generated via JS -->
+    </div>
+
+    <main class="stage" id="stage">
+      <div class="stage-card">
+        <div class="stage-header">
+          <div>
+            <h2 id="sceneHeading" style="font-size: 20px; font-weight: 700; color: #fff;">Scene Title</h2>
+            <p id="sceneContext" style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Target Time: 0:00 - 0:35</p>
+          </div>
+          <div id="badgeContainer"></div>
+        </div>
+
+        <div class="narration-box">
+          <div class="narration-label">🗣️ Voiceover Narration (Read Out Loud or Listen)</div>
+          <div class="narration-text" id="narrationText">Loading...</div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <h3 style="font-size: 13px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+            🖥️ What to Show on Screen:
+          </h3>
+          <p id="screenAction" style="font-size: 14px; color: #cbd5e1; line-height: 1.5;"></p>
+        </div>
+
+        <div class="terminal-window">
+          <div class="terminal-topbar">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+            <span class="terminal-title" id="terminalTitle">Terminal / Code Preview</span>
+          </div>
+          <div class="terminal-body" id="terminalBody"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <footer class="controls-bar">
+    <div style="display: flex; gap: 8px;">
+      <button class="btn" onclick="prevScene()">⏮ Prev Scene</button>
+      <button class="btn btn-primary" onclick="nextScene()">Next Scene ⏭</button>
+    </div>
+
+    <div class="progress-bar-container">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="time-labels">
+        <span id="currentTime">Scene 1 of 11</span>
+        <span id="timeRange">0:00 / 9:50</span>
+      </div>
+    </div>
+
+    <div>
+      <button class="btn" id="voiceToggleBtn" onclick="speakCurrentScene()">🔊 Read Aloud</button>
+    </div>
+  </footer>
+
+  <script>
+    const scenes = [
+      {
+        id: 1,
+        title: "Title & Project Summary",
+        time: "0:00 - 0:35",
+        badge: "Intro",
+        badgeClass: "badge-blue",
+        screen: "Show the top of README.md in VS Code preview.",
+        narration: "Hello, this is Prism, my capstone project. Prism is a multi-tenant, OpenAI-compatible LLM gateway. Applications send one standard chat request, while the gateway handles authentication, rate and budget limits, intelligent model routing, retry and fallback, streaming, semantic caching, accounting, recovery, and operational visibility. Normal requests use Groq's real OpenAI-compatible API. Local mock providers remain available only for deterministic failure and fallback scenarios.",
+        titleBar: "README.md - Preview",
+        code: `# Prism — LLM Gateway and Semantic Cache\n\nPrism is a multi-tenant, OpenAI-compatible LLM gateway built as a modular FastAPI monolith.\nIt demonstrates:\n  • Virtual-key security & tenant isolation\n  • Atomic RPM and budget admission via PostgreSQL row locks\n  • Provider retry and ordered failover\n  • True SSE streaming pass-through\n  • Explainable smart routing (100% on eval traps)\n  • Tenant-safe semantic caching with PostgreSQL / pgvector\n  • Conservative reconciliation & recovery\n  • Modern operations console\n\nfast and smart aliases use Groq's API. Mock providers A and B support deterministic resilience demos.`
+      },
+      {
+        id: 2,
+        title: "Architecture & Design",
+        time: "0:35 - 1:25",
+        badge: "Architecture",
+        badgeClass: "badge-purple",
+        screen: "Show Docs/Architecture.md preview in editor (point to FastAPI, Ports/Adapters, PostgreSQL+pgvector, Groq, Mocks).",
+        narration: "Prism uses a modular-monolith architecture with ports and adapters. The API layer owns HTTP validation and authentication. Application services implement admission control, routing, provider execution, caching, accounting, and recovery. The domain remains independent from FastAPI and SQLAlchemy. PostgreSQL is the source of truth, providing durable config, atomic admission counters, request logs, budget reservations, and pgvector-backed semantic-cache entries. Groq is the real upstream for normal traffic, while Mock A and Mock B implement the same adapter contract for deterministic resilience testing.",
+        titleBar: "Docs/Architecture.md",
+        code: `Client / Ops Console\n        │\n        ▼\nFastAPI API boundary ── auth, validation, headers, admin policy\n        │\n        ▼\nApplication services ── admission, routing, cache, provider execution, recovery\n        │\n        ├── PostgreSQL 16 + pgvector (source of truth, locks, cache, telemetry)\n        ├── Groq (real OpenAI-compatible upstream)\n        └── Mock A / Mock B (deterministic fallback and test upstreams)`
+      },
+      {
+        id: 3,
+        title: "Docker Services & Readiness",
+        time: "1:25 - 1:55",
+        badge: "Infrastructure",
+        badgeClass: "badge-green",
+        screen: "Switch to PowerShell terminal window.",
+        narration: "Docker Compose starts five local services: PostgreSQL, two mock providers, the FastAPI gateway, and the React operations console. The gateway securely calls Groq over its OpenAI-compatible API. PostgreSQL is healthy, and readiness confirms that the required database dependency is available.",
+        titleBar: "PowerShell - Readiness Check",
+        code: `PS > docker compose ps\n\nNAME                  SERVICE           STATUS                  PORTS\n...console-1           console           Up 3 hours              0.0.0.0:5173->80/tcp\n...gateway-1           gateway           Up 2 hours              0.0.0.0:8000->8000/tcp\n...mock-provider-a-1   mock-provider-a   Up 15 hours             0.0.0.0:8101->8101/tcp\n...mock-provider-b-1   mock-provider-b   Up 15 hours             0.0.0.0:8102->8102/tcp\n...postgres-1          postgres          Up 17 hours (healthy)   0.0.0.0:5432->5432/tcp\n\nPS > Invoke-RestMethod http://localhost:8000/health/ready\n\nstatus   : ready\ndatabase : connected`
+      },
+      {
+        id: 4,
+        title: "Completions & True SSE Streaming",
+        time: "1:55 - 2:50",
+        badge: "Data Plane",
+        badgeClass: "badge-blue",
+        screen: "Terminal: point to x-prism-* headers, then show unbuffered token streaming terminating with [DONE].",
+        narration: "This is a normal OpenAI-compatible completion using Team Alpha's virtual key. The response headers explain which physical provider ran, whether cache or fallback was used, and the settled cost. Streaming is passed through as server-sent events instead of being buffered. A successful stream ends with the standard data: [DONE] marker. Once content has been emitted, Prism never changes providers.",
+        titleBar: "PowerShell - Chat Completions & Streaming",
+        code: `PS > Send-Prism -Key $alphaKey -Model 'fast' -Prompt "Hello from the Prism recording $demoTag"\n\nStatus   : 200\nProvider : groq\nCache    : miss\nFallback : false\nCostUSD  : 0.0000221250\nBody     : {"id":"chatcmpl-...","model":"fast","choices":[{"message":{"content":"Hello! How can I help you today?"}}]}\n\nPS > curl.exe -N "$base/v1/chat/completions" -H "Authorization: Bearer $alphaKey" -H 'Content-Type: application/json' --data-binary $streamBody\n\ndata: {"id":"chatcmpl-...","choices":[{"delta":{"content":"Prism"}}]}\ndata: {"id":"chatcmpl-...","choices":[{"delta":{"content":" is"}}]}\ndata: {"id":"chatcmpl-...","choices":[{"delta":{"content":" a"}}]}\ndata: {"id":"chatcmpl-...","choices":[{"delta":{"content":" high"}}]}\ndata: {"id":"chatcmpl-...","choices":[{"delta":{"content":" performance"}}]}\ndata: {"id":"chatcmpl-...","choices":[{"delta":{"content":" gateway."}}]}\ndata: [DONE]`
+      },
+      {
+        id: 5,
+        title: "Intelligent Auto Routing",
+        time: "2:50 - 3:45",
+        badge: "Routing",
+        badgeClass: "badge-purple",
+        screen: "Terminal showing auto classifier decisions and routing_eval.py output.",
+        narration: "The auto alias uses a versioned rules classifier. The simple listing request selects Groq's fast 20B target. The mathematical proof selects the smart 120B target. Every decision stores its tier, reason code, and confidence. The committed evaluation scores 100 percent, compared with 40 percent for a length-only baseline, including 100 percent on trap cases.",
+        titleBar: "PowerShell - Routing Eval",
+        code: `PS > Send-Prism -Key $alphaKey -Model 'auto' -Prompt "List three primary colors $demoTag"\nProvider : groq   (Model target: openai/gpt-oss-20b)\n\nPS > Send-Prism -Key $alphaKey -Model 'auto' -Prompt "Prove that square root of two is irrational $demoTag"\nProvider : groq   (Model target: openai/gpt-oss-120b)\n\nPS > python scripts/routing_eval.py\n{\n  "classifier_version": "rules-v1",\n  "cases": 10,\n  "classifier_accuracy": 1.0,\n  "baseline_accuracy": 0.4,\n  "trap_accuracy": 1.0\n}`
+      },
+      {
+        id: 6,
+        title: "Retry and Ordered Fallback",
+        time: "3:45 - 4:25",
+        badge: "Resilience",
+        badgeClass: "badge-green",
+        screen: "Terminal: point out Mock A 503 failure and fallback to Mock B with Fallback: true.",
+        narration: "For this deterministic fault-injection scene I use the explicit mock-fast alias. The 503 marker makes Mock A fail predictably. Prism records the failed attempt and moves through the configured retry and fallback chain. Mock B succeeds, and the response reports Fallback: true. Fallback is allowed only before response commitment.",
+        titleBar: "PowerShell - Fault Injection & Failover",
+        code: `PS > Send-Prism -Key $alphaKey -Model 'mock-fast' -Prompt "Recover this request from [[503]] $demoTag"\n\nStatus   : 200\nProvider : mock-b\nCache    : miss\nFallback : true\nCostUSD  : 0.0000000000\nBody     : {"id":"chatcmpl-...","model":"mock-b","choices":[{"message":{"content":"Mock B response successful"}}]}\n\n(Gateway log: Mock A returned 503 Service Unavailable -> Backoff -> Dispatched to Mock B)`
+      },
+      {
+        id: 7,
+        title: "Semantic Cache & Tenant Isolation",
+        time: "4:25 - 5:35",
+        badge: "Semantic Cache",
+        badgeClass: "badge-blue",
+        screen: "Terminal: Team Alpha miss, Team Alpha paraphrase HIT ($0 cost), and Team Beta cross-tenant miss.",
+        narration: "The first Team Alpha request is a cache miss and stores an eligible response. The paraphrased request crosses the similarity threshold, so the second response is a zero-cost cache hit. The same paraphrase sent with Team Beta is a miss. Cache lookup is scoped by virtual key, conversation context, generation settings, resolved route, embedding version, and TTL, preventing any cross-tenant data leakage.",
+        titleBar: "PowerShell - Vector Semantic Cache",
+        code: `PS > Send-Prism -Key $alphaKey -Model 'fast' -Prompt "Explain semantic caching for an automobile $demoTag"\nProvider : groq\nCache    : miss\nCostUSD  : 0.0000236\n\nPS > Send-Prism -Key $alphaKey -Model 'fast' -Prompt "Describe semantic cache for a car $demoTag"\nProvider : cache\nCache    : hit\nCostUSD  : 0.0000000000  <-- ZERO COST HIT!\n\nPS > Send-Prism -Key $betaKey -Model 'fast' -Prompt "Describe semantic cache for a car $demoTag"\nProvider : groq\nCache    : miss  <-- ZERO CROSS-TENANT LEAKAGE!`
+      },
+      {
+        id: 8,
+        title: "Atomic RPM & Budget Controls",
+        time: "5:35 - 6:20",
+        badge: "Admission",
+        badgeClass: "badge-purple",
+        screen: "Terminal: 3 requests on 2-RPM key (200, 200, 429) and budget key rejection (402).",
+        narration: "This key permits two requests per minute, so the third request returns HTTP 429. The second key has an intentionally tiny budget and returns HTTP 402 before a provider is called. Admission uses a short PostgreSQL transaction with row locking. Estimated cost is reserved atomically before provider execution, then settled exactly once using actual usage.",
+        titleBar: "PowerShell - Rate Limiting & Budgets",
+        code: `PS > 1..3 | ForEach-Object { Send-Prism -Key 'prism-demo-rpm-limited' -Model 'fast' -Prompt "Request $_" }\n\nRequest 1: Status : 200 (Success)\nRequest 2: Status : 200 (Success)\nRequest 3: Status : 429 (Too Many Requests - {"code":"rate_limit_exceeded"})\n\nPS > Send-Prism -Key 'prism-demo-budget-limited' -Model 'fast' -Prompt "Budget check"\n\nStatus   : 402\nBody     : {"error":{"message":"Monthly cost budget exceeded","code":"budget_exhausted"}}`
+      },
+      {
+        id: 9,
+        title: "Operations Console",
+        time: "6:20 - 7:50",
+        badge: "Ops Console",
+        badgeClass: "badge-green",
+        screen: "Browser at http://localhost:5173. Connect with development-only-change-this-admin-key. Show Overview, Requests, Providers.",
+        narration: "The admin console explains what happened without direct database access. The overview aggregates usage, tokens, spend, cache hits, and fallbacks by tenant. The request audit trail exposes routing and operational signals, and the provider view preserves each retry and fallback attempt independently. The console never returns raw API keys, key digests, or prompts. The admin key remains only in page memory.",
+        titleBar: "Chrome - Prism Operations Console (http://localhost:5173)",
+        code: `[OVERVIEW METRICS]\nRequests: 55 recorded   | Token Volume: 1,728   | Spend: $0.000371   | Cache Hit Rate: 9.1%\n\n[TENANTS TABLE]\nTenant       | Key Prefix   | Requests | Tokens | Cache Hits | Fallbacks | Spend\nTeam Alpha   | prism-demo-t | 48       | 1,384  | 5          | 4         | $0.000311\nTeam Beta    | prism-demo-t | 3        | 52     | 0          | 0         | $0.000008\nRPM Demo     | prism-demo-r | 4        | 292    | 0          | 0         | $0.000052\n\n[CACHE STATS]\nTeam Alpha: 15 active entries | 10.4% vector lookup hits`
+      },
+      {
+        id: 10,
+        title: "Recovery, Metrics & Smoke Tests",
+        time: "7:50 - 9:20",
+        badge: "Observability",
+        badgeClass: "badge-blue",
+        screen: "Browser at http://localhost:8000/docs, then terminal running smoke_test.py (passed: 9).",
+        narration: "Prism includes conservative crash recovery. A stale reservation with no provider attempt is safe to release. If any potentially billable provider attempt exists, Prism does not guess; it marks the reservation for manual reconciliation. A PostgreSQL advisory lock ensures that only one reconciler runs at a time. The nine-path smoke suite validates all core features.",
+        titleBar: "PowerShell - End-to-End Smoke Test",
+        code: `PS > python scripts/smoke_test.py\n{\n  "base_url": "http://127.0.0.1:8000",\n  "passed": 9,\n  "checks": [\n    {"name": "readiness", "passed": true, "status": 200},\n    {"name": "model allowlist", "passed": true},\n    {"name": "non-stream completion", "passed": true, "provider": "groq"},\n    {"name": "SSE completion", "passed": true, "done": true},\n    {"name": "auto routing", "passed": true},\n    {"name": "ordered fallback", "passed": true, "provider": "mock-b", "fallback": "true"},\n    {"name": "semantic cache hit", "passed": true, "first": "miss", "second": "hit"},\n    {"name": "cross-tenant cache isolation", "passed": true, "beta_cache": "miss"},\n    {"name": "admin operations API", "passed": true, "status": 200, "tenants": 3}\n  ]\n}`
+      },
+      {
+        id: 11,
+        title: "Conclusion & Verification",
+        time: "9:20 - 9:50",
+        badge: "Wrap Up",
+        badgeClass: "badge-purple",
+        screen: "Return to Ops Console or README.md title.",
+        narration: "To conclude, Prism provides one OpenAI-compatible API with secure multi-tenant admission, explainable routing, provider resilience, true streaming, isolated semantic caching, exact accounting, conservative recovery, metrics, and an operations console. The final Python 3.12 and PostgreSQL suite has 61 passing tests with 82.62 percent branch coverage. Ruff, strict Mypy, the React production build, clean Docker startup, smoke tests, load evidence, and accounting reconciliation all pass. Thank you.",
+        titleBar: "Wrap Up",
+        code: `========================================================================\nPRISM CAPSTONE VERIFICATION SUMMARY:\n  • Test Suite: 61 passed in 4.97s\n  • Branch Coverage: 82.62% (Target: 80%)\n  • Mypy / Ruff: Strict Clean (0 errors)\n  • Smoke Test: 9/9 Passed\n  • Load Test: 20/20 Passed (p95: 134ms)\n  • Video Script: Rehearsal Verified\n========================================================================`
+      }
+    ];
+
+    let currentIdx = 0;
+    let isAutoPlaying = false;
+    let synth = window.speechSynthesis;
+    let currentUtterance = null;
+
+    function renderPlaylist() {
+      const pl = document.getElementById("playlist");
+      pl.innerHTML = scenes.map((s, idx) => `
+        <div class="scene-item ${idx === currentIdx ? 'active' : ''}" onclick="selectScene(${idx})">
+          <div class="header-row">
+            <span>SCENE ${s.id}</span>
+            <span>${s.time}</span>
+          </div>
+          <div class="scene-title">${s.title}</div>
+          <div class="scene-meta">${s.badge}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderScene(idx) {
+      currentIdx = idx;
+      renderPlaylist();
+      const s = scenes[idx];
+
+      document.getElementById("sceneHeading").innerText = `Scene ${s.id} — ${s.title}`;
+      document.getElementById("sceneContext").innerText = `Target Video Timestamp: ${s.time}`;
+      document.getElementById("narrationText").innerText = `"${s.narration}"`;
+      document.getElementById("screenAction").innerText = s.screen;
+      document.getElementById("terminalTitle").innerText = s.titleBar;
+      document.getElementById("terminalBody").innerHTML = `<div class="output-line">${escapeHtml(s.code)}</div>`;
+
+      document.getElementById("badgeContainer").innerHTML = `<span class="badge ${s.badgeClass}">${s.badge}</span>`;
+      
+      const pct = Math.round(((idx + 1) / scenes.length) * 100);
+      document.getElementById("progressFill").style.width = `${pct}%`;
+      document.getElementById("currentTime").innerText = `Scene ${s.id} of ${scenes.length}`;
+      document.getElementById("timeRange").innerText = s.time;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function selectScene(idx) {
+      stopVoice();
+      renderScene(idx);
+    }
+
+    function nextScene() {
+      if (currentIdx < scenes.length - 1) {
+        selectScene(currentIdx + 1);
+        if (isAutoPlaying) speakCurrentScene();
+      } else {
+        stopAutoPlay();
+      }
+    }
+
+    function prevScene() {
+      if (currentIdx > 0) {
+        selectScene(currentIdx - 1);
+        if (isAutoPlaying) speakCurrentScene();
+      }
+    }
+
+    function stopVoice() {
+      if (synth && synth.speaking) {
+        synth.cancel();
+      }
+    }
+
+    function speakCurrentScene() {
+      stopVoice();
+      const s = scenes[currentIdx];
+      if (!('speechSynthesis' in window)) {
+        alert("Speech synthesis is not supported in this browser.");
+        return;
+      }
+      currentUtterance = new SpeechSynthesisUtterance(s.narration);
+      currentUtterance.rate = 1.0;
+      currentUtterance.pitch = 1.0;
+
+      const btn = document.getElementById("voiceToggleBtn");
+      btn.innerText = "⏹ Stop Voice";
+
+      currentUtterance.onend = () => {
+        btn.innerText = "🔊 Read Aloud";
+        if (isAutoPlaying) {
+          setTimeout(() => nextScene(), 1500);
+        }
+      };
+
+      currentUtterance.onerror = () => {
+        btn.innerText = "🔊 Read Aloud";
+      };
+
+      synth.speak(currentUtterance);
+    }
+
+    function toggleAutoPlay() {
+      if (isAutoPlaying) {
+        stopAutoPlay();
+      } else {
+        isAutoPlaying = true;
+        document.getElementById("autoPlayBtn").innerHTML = "<span>⏸ Pause Auto-Play</span>";
+        document.getElementById("autoPlayBtn").classList.replace("btn-accent", "btn-primary");
+        speakCurrentScene();
+      }
+    }
+
+    function stopAutoPlay() {
+      isAutoPlaying = false;
+      stopVoice();
+      document.getElementById("autoPlayBtn").innerHTML = "<span>▶ Play Voiceover & Auto-Advance</span>";
+      document.getElementById("autoPlayBtn").classList.replace("btn-primary", "btn-accent");
+      document.getElementById("voiceToggleBtn").innerText = "🔊 Read Aloud";
+    }
+
+    function openDocs() {
+      window.open("https://github.com/AKkKA1231/CapstoneProjectAirtribe/blob/main/Docs/explainer-video-script.md", "_blank");
+    }
+
+    // Initialize on load
+    renderScene(0);
+  </script>
+</body>
+</html>
+
