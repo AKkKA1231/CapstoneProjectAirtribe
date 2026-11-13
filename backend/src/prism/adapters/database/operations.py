@@ -129,13 +129,13 @@ class PostgresOperationsRepository:
             rows = (await session.execute(statement)).all()
         items = []
         for row in rows:
-            log = cast(RequestLog, row[0])
+            log = row[0]
             items.append(
                 RequestView(
                     id=log.id,
                     key_id=log.key_id,
-                    key_prefix=cast(str, row[1]),
-                    tenant_name=cast(str, row[2]),
+                    key_prefix=row[1],
+                    tenant_name=row[2],
                     request_alias=log.request_alias,
                     resolved_alias=log.resolved_alias,
                     provider=cast(str | None, row[3]),
@@ -259,15 +259,15 @@ class PostgresOperationsRepository:
             rows = (await session.execute(statement)).all()
         items = []
         for row in rows:
-            attempt = cast(ProviderAttempt, row[0])
+            attempt = row[0]
             items.append(
                 ProviderAttemptView(
                     id=attempt.id,
                     request_log_id=attempt.request_log_id,
                     key_id=cast(Any, row[1]),
-                    key_prefix=cast(str, row[2]),
-                    tenant_name=cast(str, row[3]),
-                    provider=cast(str, row[4]),
+                    key_prefix=row[2],
+                    tenant_name=row[3],
+                    provider=row[4],
                     model=attempt.model,
                     attempt_number=attempt.attempt_number,
                     retry_number=attempt.retry_number,
