@@ -57,6 +57,11 @@ Desktop.ini
 # Logs
 *.log
 
+# Generated demo and recording artifacts
+Docs/.rendered_*/
+Docs/*_draft.docx
+reports/video_frames/
+
 # Frontend dependencies
 node_modules/
 *.tsbuildinfo
