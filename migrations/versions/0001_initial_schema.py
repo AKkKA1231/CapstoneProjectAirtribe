@@ -186,9 +186,7 @@ def upgrade() -> None:
         )
         """
     )
-    op.execute(
-        "CREATE INDEX ix_request_logs_key_created ON request_logs(key_id, created_at DESC)"
-    )
+    op.execute("CREATE INDEX ix_request_logs_key_created ON request_logs(key_id, created_at DESC)")
     op.execute("CREATE INDEX ix_request_logs_created ON request_logs(created_at DESC)")
     op.execute("CREATE INDEX ix_request_logs_status ON request_logs(status)")
 
@@ -218,9 +216,7 @@ def upgrade() -> None:
         )
         """
     )
-    op.execute(
-        "CREATE INDEX ix_budget_reservations_pending ON budget_reservations(key_id, status)"
-    )
+    op.execute("CREATE INDEX ix_budget_reservations_pending ON budget_reservations(key_id, status)")
     op.execute(
         f"""
         CREATE TABLE provider_attempts (
@@ -252,9 +248,7 @@ def upgrade() -> None:
         )
         """
     )
-    op.execute(
-        "CREATE INDEX ix_provider_attempts_request ON provider_attempts(request_log_id)"
-    )
+    op.execute("CREATE INDEX ix_provider_attempts_request ON provider_attempts(request_log_id)")
 
     op.execute(
         f"""
@@ -323,9 +317,7 @@ def upgrade() -> None:
         )
         """
     )
-    op.execute(
-        "CREATE INDEX ix_security_events_created ON security_events(created_at DESC)"
-    )
+    op.execute("CREATE INDEX ix_security_events_created ON security_events(created_at DESC)")
 
 
 def downgrade() -> None:
@@ -333,9 +325,7 @@ def downgrade() -> None:
 
     op.execute("DROP TABLE IF EXISTS security_events")
     op.execute("DROP TABLE IF EXISTS routing_eval_cases")
-    op.execute(
-        "ALTER TABLE request_logs DROP CONSTRAINT IF EXISTS fk_request_logs_cache_entry"
-    )
+    op.execute("ALTER TABLE request_logs DROP CONSTRAINT IF EXISTS fk_request_logs_cache_entry")
     op.execute("DROP TABLE IF EXISTS cache_entries")
     op.execute("DROP TABLE IF EXISTS provider_attempts")
     op.execute("DROP TABLE IF EXISTS budget_reservations")

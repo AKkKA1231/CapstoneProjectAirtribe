@@ -19,9 +19,7 @@ def _prompt(body: dict[str, object]) -> str:
     if not isinstance(messages, list):
         return ""
     return " ".join(
-        str(message.get("content", ""))
-        for message in messages
-        if isinstance(message, dict)
+        str(message.get("content", "")) for message in messages if isinstance(message, dict)
     )
 
 
@@ -42,9 +40,7 @@ def _failure(prompt: str) -> Response | None:
     if "[[429]]" in prompt and primary_only:
         return JSONResponse({"error": {"message": "planned 429"}}, status_code=429)
     if "[[fatal]]" in prompt:
-        return JSONResponse(
-            {"error": {"message": "planned fatal error"}}, status_code=400
-        )
+        return JSONResponse({"error": {"message": "planned fatal error"}}, status_code=400)
     if "[[malformed]]" in prompt and primary_only:
         return Response("not-json", media_type="application/json")
     return None
@@ -90,9 +86,7 @@ async def chat_completions(request: Request) -> Response:
             "object": "chat.completion.chunk",
             "created": int(time()),
             "model": model,
-            "choices": [
-                {"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}
-            ],
+            "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}],
         }
         yield f"data: {json.dumps(role_chunk)}\n\n".encode()
         for index, token in enumerate(completion.split()):
